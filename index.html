@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+
+<html data-mode="static" lang="zh-CN">
+<head>
+<meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta content="跨厂商 GPU 规格数据库与动态性能天梯，支持显存、带宽、通用与矩阵算力比较。" name="description"/>
+<title>算力天梯</title><link href="./style.css?v=062649ea2593" rel="stylesheet"/><script defer="" src="./app.js?v=a9990327382d"></script>
+</head>
+<body>
+<header class="topbar">
+<a aria-label="算力天梯首页" class="brand" href="./"><svg aria-hidden="true" viewbox="0 0 32 32"><rect height="16" rx="3" width="16" x="8" y="8"></rect><path d="M12 2v6m8-6v6M12 24v6m8-6v6M2 12h6m-6 8h6m16-8h6m-6 8h6"></path><rect height="6" rx="1" width="6" x="13" y="13"></rect></svg><span>算力<b>天梯</b><small>GPU 性能与规格对比</small></span></a>
+<nav aria-label="页面"><button class="nav active" data-view="ranking">动态天梯</button><button class="nav" data-view="database">GPU 数据库</button><button class="nav" data-view="methodology">数据与口径</button></nav>
+<div class="header-actions"><span class="local-status"><i></i> 本地持久化</span><button class="secondary" id="open-compare">产品比较 <span id="compare-header-count">0/5</span></button></div>
+</header>
+<div class="workspace">
+<aside class="sidebar">
+<div class="side-heading"><span>筛选器</span><button class="text-button" id="reset">重置</button></div>
+<label class="search-box"><span>⌕</span><input aria-label="筛选 GPU 型号" id="filter-search" placeholder="搜索型号、架构…" type="search"/></label>
+<div aria-label="快捷产品范围" class="scope-filters" role="group"><button class="active" data-scope="all">全部产品</button><button data-scope="china">中国特供</button><button data-scope="unified">统一内存</button><button data-scope="domestic">国产厂商</button><button aria-pressed="false" data-scope="apple" type="button">Apple M 系列</button></div><fieldset><legend>芯片厂商</legend><div id="vendor-filters"></div></fieldset>
+<fieldset><legend>产品类别</legend><div id="segment-filters"></div></fieldset>
+<fieldset><legend>架构 <span id="arch-count"></span></legend><div class="architecture-list" id="architecture-filters"></div></fieldset>
+<fieldset><legend>产品形态</legend><select aria-label="产品形态" id="form-filter"><option value="all">全部形态</option><option value="desktop">桌面显卡</option><option value="mobile">移动显卡</option><option value="pcie">PCIe 加速卡</option><option value="sxm">SXM 模组</option><option value="oam">OAM 模组</option><option value="module">其他模组</option><option value="soc">统一内存 SoC</option></select></fieldset>
+<fieldset><legend>发布年份</legend><select aria-label="筛选发布年份" id="year-filter"><option value="all">全部年份</option></select></fieldset>
+<label class="check-line small"><input id="show-missing" type="checkbox"/> 显示主指标缺失的 GPU</label>
+<div class="sidebar-note"><span class="eyebrow">READ THE NUMBERS</span><p>理论、推算与实测以下标区分，条件见型号详情。点击型号查看规格、来源与计算口径。</p><span>独立 GPU · 统一内存 SoC · AI 加速卡</span></div>
+</aside>
+<main>
+<section class="page-heading"><div><div class="eyebrow">CROSS-VENDOR GPU EXPLORER</div><h1 id="page-title">每一份算力，都有坐标。</h1><p id="page-subtitle">跨越架构与厂商，用相同指标比较 GPU。</p></div><button class="secondary" id="export-button">↓ 导出当前数据</button></section>
+<div class="notice error" hidden="" id="load-error" role="alert"></div>
+<div class="publication-info" hidden="" id="publication-info"><span>公开浏览版 · <span id="publication-date">正在读取快照</span></span><a href="https://github.com/casazaft/chiprank_pub" rel="noopener noreferrer" target="_blank">发布说明 ↗</a></div>
+<div id="main-content">
+<section aria-label="数据库概览" class="stats"><div><span>收录型号</span><strong id="stat-total">—</strong><small>已发布 GPU 规格</small></div><div><span>当前筛选</span><strong id="stat-filtered">—</strong><small id="stat-vendors">跨厂商同屏对比</small></div><div><span>有主指标</span><strong id="stat-valid">—</strong><small id="stat-missing">缺失值排后</small></div><div class="leader-stat"><span>当前排序首位</span><strong id="stat-leader">—</strong><small id="stat-leader-value">等待数据加载</small></div></section>
+<section class="ranking-panel">
+<div class="ranking-toolbar"><div class="metric-control"><label for="metric">主排序</label><select id="metric"></select><select aria-label="主排序方向" id="sort-direction"><option value="desc">↓ 从高到低</option><option value="asc">↑ 从低到高</option></select></div><div class="toolbar-right"><button class="secondary" id="add-sort">＋ 添加指标</button><select aria-label="显示条数" id="row-limit"><option value="30">前 30 款</option><option value="60">前 60 款</option><option value="0">全部型号</option></select></div></div>
+<div class="sort-settings"><div aria-label="次级排序指标" id="sort-rules"></div><div class="price-sorting-settings" hidden="" id="price-sorting-settings"><label for="price-currency">价格币种</label><select id="price-currency"><option value="USD">USD</option></select><span>仅比较所选币种；其他币种作为本列缺失值处理，不自动换汇。</span></div><div class="sort-explanation"><span aria-live="polite" id="sort-summary"></span><button class="text-button" hidden="" id="clear-sorts">仅保留主指标</button></div><p>按优先级依次比较，相同时比较下一项；各项缺失值始终排后。条形长度展示主指标。</p></div>
+<div class="jd-sorting-settings" hidden="" id="jd-sorting-settings"><div class="price-sorting-settings"><label for="jd-date">京东检索日期</label><select id="jd-date"><option value="latest">各型号最近一次检索</option></select></div><p>按北京时间归档；指定日期只使用当日最后一次检索，不用其他日期补缺。最新模式可能包含不同日期，日期逐卡展示。</p><p aria-live="polite" id="jd-coverage"></p></div>
+<p class="compute-legend">数值下标：<sub class="compute-marker basis-official">官</sub> 官方理论 · <sub class="compute-marker basis-derived">推</sub> 推算 · <sub class="compute-marker basis-measured">测</sub> 实测 · <sub class="compute-marker basis-reference">参</sub> 第三方规格。优先采用官方、推算或已有规格，缺项用实测；来源与条件见详情。</p><div class="metric-context"><span id="metric-note"></span><div class="legend" id="vendor-legend"></div></div>
+<div class="table-scroll"><table id="ranking-table"><thead><tr><th class="selection-col"><span class="sr-only">选择对比</span></th><th class="rank-col">排名</th><th>GPU / 架构</th><th class="class-col">类别</th><th class="launch-col date-col">发布日期</th><th class="launch-col price-col">发布售价</th><th class="bar-col" id="metric-column">理论峰值</th><th class="value-col" id="unit-column">数值</th></tr></thead><tbody id="gpu-rows"><tr><td class="empty" colspan="8">正在加载 GPU 数据…</td></tr></tbody></table></div>
+<div class="table-footer"><span id="table-summary"></span><span>— 表示未公开或未核验，不等于 0</span></div>
+</section>
+</div>
+<section hidden="" id="methodology">
+<div class="info-grid"><article><span class="eyebrow">01 / COVERAGE</span><h2>跨厂商，多种内存方案</h2><p>NVIDIA 覆盖 Ampere、Ada、Hopper、Blackwell；AMD 覆盖同期 RDNA 与 CDNA 产品；Intel 覆盖 Arc、Arc Pro 与数据中心 GPU。同时收录中国特供型号、Apple / NVIDIA / AMD 统一内存 SoC，以及华为、寒武纪、摩尔线程等国产加速产品。移动型号单独标记。数据库是可扩展的规格快照，不能保证涵盖所有 OEM、地区和新发布变体。</p></article><article><span class="eyebrow">02 / PROVENANCE</span><h2>每个数值可追溯</h2><p>规格参考厂商文档、TechPowerUp 等第三方资料及公开研究。数值保留来源链接、核验日期和必要的口径说明；官方理论、推算和实测分别标记。此站展示整理后的规格事实与原创比较说明。</p></article><article><span class="eyebrow">03 / COMPARABILITY</span><h2>把口径放在数值旁边</h2><p>通用 FP16 / FP32 / FP64 与矩阵算力分开。矩阵统一按稠密算力排名，并标注已核验的稀疏倍率；不重复列出稀疏算力。INT4 / INT8 使用 TOPS，其余使用 TFLOPS。稀疏倍率要求特定数据结构，不能默认视为 2 倍。不同 GPU 的累加精度、时钟和指令路径可能不同，比较前请查看详情。</p></article><article><span class="eyebrow">04 / UNITS</span><h2>容量、带宽与理论峰值</h2><p>独立显存按产品标称 GB 保存；统一内存注明固定配置或最高支持容量，最高值以 ≤ 标记，CPU/GPU 共享，实际可供 GPU 分配容量受系统和配置限制。NPU 或整机 AI TOPS 不作为 GPU 通用 / 矩阵算力。带宽统一为十进制 GB/s（1 TB/s = 1000 GB/s）。算力数值以下标注明口径，优先官方理论、其次推算和已有第三方规格，再用实测补缺。相同口径按测试日期（未知时按来源日期）选最新记录，不自动取最大值。按显示值排序；不同口径或测试条件不代表严格横向性能对比，所有记录均可在详情查看。多芯片产品须注意单芯片与整卡口径。未公开、不支持或未完成核验的指标留空，默认不参与排名。移动 GPU 的功耗配置会影响表现。</p></article></div>
+<div class="notice">京东检索均价：按同型号、同容量单卡的普通标价样本去重后取算术平均，排除明确二手、整机、配件、订金及优惠条件价。商品成色仅依据搜索卡片判断，未逐件核验实物与详情页成色。公开版保留检索日期、地区、样本数、价格区间和均值；不代表全站均价或实际成交价。没有有效样本时不生成价格，移动 GPU 和统一内存 SoC 不以整机价格替代。</div>
+<div class="notice" id="tpu-review-summary"></div>
+<div class="notice" id="storage-notice">公开规格快照，支持筛选、排序、比较与 JSON 导出。浏览器保存筛选偏好与比较选择。</div>
+</section>
+<footer class="page-footer"><span>算力天梯 <b> / </b> 让规格更可比较</span><span id="data-version">本地数据快照</span></footer>
+</main>
+</div>
+<div class="compare-tray" hidden="" id="compare-tray"><div class="compare-tray-summary"><b id="compare-count">0</b> / 5 款已选<div class="compare-chips" id="compare-names"></div></div><button class="text-button" id="clear-compare">清空</button><button class="primary" id="compare-button">比较全部参数 ↗</button></div>
+<dialog class="wide-dialog" id="detail-dialog"><div id="detail-content"></div></dialog>
+
+<dialog aria-labelledby="compare-title" class="compare-dialog" id="compare-dialog"><div class="dialog-head"><div><span class="eyebrow">SIDE BY SIDE · UP TO 5</span><h2 id="compare-title">产品比较 · 全部参数</h2></div><button aria-label="关闭比较" class="icon-button" data-close="">×</button></div>
+<div class="compare-controls"><label for="compare-search">从全部产品中添加<input aria-controls="compare-results" autocomplete="off" id="compare-search" placeholder="搜索型号、厂商或架构，不受榜单筛选限制" type="search"/></label><label for="compare-jd-date">京东价格检索日期<select id="compare-jd-date"></select></label><button class="text-button" id="compare-clear">清空选择</button></div>
+<p class="compare-status muted" id="compare-status" role="status"></p><div aria-label="已选比较产品" class="compare-chips" id="compare-selected"></div>
+<details class="compare-picker" id="compare-picker"><summary>搜索并添加产品</summary><div aria-label="可比较产品" class="compare-results" id="compare-results"></div></details>
+<p class="muted compare-help">最多选择 5 款，切换筛选或刷新后保留。官＝官方理论，推＝推算，测＝实测，参＝第三方规格。矩阵仅显示稠密值及稀疏倍率；高亮表示当前数值最高，不代表同条件测试。价格按原币种展示，缺失值不等于 0。</p><div id="compare-content"></div></dialog>
+
+<div class="toast" hidden="" id="toast" role="status"></div>
+</body>
+</html>

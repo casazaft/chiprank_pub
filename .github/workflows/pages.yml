@@ -1,0 +1,38 @@
+name: Deploy public website
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stage website files
+        run: |
+          mkdir -p "$RUNNER_TEMP/public-site/data"
+          cp index.html app.js style.css .nojekyll "$RUNNER_TEMP/public-site/"
+          cp data/gpus.json "$RUNNER_TEMP/public-site/data/"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/public-site
+      - uses: actions/deploy-pages@v4
+        id: deployment
