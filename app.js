@@ -385,7 +385,7 @@ function comparisonTableHtml(gpus) {
     +row('完整算力证据 / 测试条件',g=>(g.compute_observations||[]).length?`<details class="compare-note"><summary>查看 ${g.compute_observations.length} 条证据</summary>${computeHistoryHtml(g)}</details>`:'无独立算力观测；规格口径见指标说明及来源')
     +row('京东历史 / 商品样本',g=>(g.jd_prices||[]).length?`<details class="compare-note"><summary>查看 ${g.jd_prices.length} 次检索</summary>${jdHistoryHtml(g,false)}</details>`:'尚未检索')
     +row('规格与发布说明',g=>[...(g.notes||[]),...(g.launch_notes||[])].map(n=>'<p>'+esc(n)+'</p>').join('')||'—')
-    +row('TechPowerUp 核验状态',g=>esc(({verified:'对应页面已核验',verified_variant:'容量变体已核验',related_model:'仅有相关型号',not_listed:'未找到独立条目'})[g.tpu_status]||'未完成逐页核验'))
+    +row('TechPowerUp 核验状态',g=>esc(({verified:'对应页面已核验',verified_variant:'容量变体已核验',related_model:'仅有相关型号',not_listed:'未找到独立条目'})[g.tpu_status]||((g.compute_observations||[]).some(o=>o.basis==='reference'&&o.engine==='gpu_matrix')?'矩阵参数已核验；其他字段见逐项来源':'未完成逐页核验')))
     +row('全部资料来源 / 核验日期',g=>(g.sources||[]).map((s,i)=>`<p><a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">[${i+1}] ${esc(s.title||s.url)} ↗</a><small>${esc(s.accessed_at||'核验日期未记录')}</small></p>`).join('')||'—');
   return `<div class="compare-table" tabindex="0" role="region" aria-label="全部参数对比表，可横向和纵向滚动"><table class="comparison-grid" style="--compare-columns:${gpus.length}"><caption class="sr-only">${gpus.length} 款产品全部参数对比</caption><thead><tr><th scope="col">参数 / 单位</th>${gpus.map(g=>`<th scope="col"><span style="color:${colors[g.vendor]}">${esc(vendorLabels[g.vendor]||g.vendor)}</span><br>${esc(shortName(g))}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
