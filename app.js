@@ -7,7 +7,19 @@ const colors = {NVIDIA:'var(--nvidia)',AMD:'var(--amd)',Intel:'var(--intel)',App
 const vendorLabels = {Huawei:'华为 Huawei',Cambricon:'寒武纪 Cambricon','Moore Threads':'摩尔线程'};
 const domesticVendors = new Set(['Huawei','Cambricon','Moore Threads']);
 const MAX_COMPARE = 5;
-const segments = {consumer:'消费级',workstation:'工作站级',server:'服务器级'};
+const segments = {consumer_desktop:'消费级 · 台式机',consumer_mobile:'消费级 · Mobile',workstation:'工作站级',server:'服务器级'};
+function productPlatforms(gpu) {
+  if (gpu.platforms?.length) return gpu.platforms;
+  if (gpu.form_factor==='mobile') return ['mobile'];
+  return gpu.segment==='consumer'||gpu.form_factor==='desktop'?['desktop']:[];
+}
+function productCategories(gpu) {
+  return gpu.segment==='consumer'?productPlatforms(gpu).map(p=>'consumer_'+p):[gpu.segment];
+}
+function categoryLabel(gpu) {
+  if(gpu.segment!=='consumer')return segments[gpu.segment]||gpu.segment;
+  return '消费级 · '+productPlatforms(gpu).map(p=>p==='mobile'?'Mobile':'台式机').join(' / ');
+}
 const forms = {desktop:'桌面',mobile:'移动',pcie:'PCIe',sxm:'SXM',oam:'OAM',module:'模组',soc:'统一内存 SoC'};
 const format = value => value == null ? '—' : new Intl.NumberFormat('en-US',{maximumFractionDigits:value < 1 ? 4 : 2}).format(value);
 const formatCompute = value => value == null ? '—' : new Intl.NumberFormat('en-US',{maximumFractionDigits:4}).format(value);
@@ -137,7 +149,8 @@ function restoreFilters() {
   try {
     const saved=JSON.parse(localStorage.getItem('gpu-atlas-filters')||'null');
     if (!saved) return;
-    for(const k of ['vendors','segments','architectures']) if(Array.isArray(saved[k])) state[k]=new Set(saved[k]);
+    for(const k of ['vendors','architectures']) if(Array.isArray(saved[k])) state[k]=new Set(saved[k]);
+    if(Array.isArray(saved.segments)) state.segments=new Set(saved.segments.flatMap(key=>key==='consumer'?['consumer_desktop','consumer_mobile']:[key]).filter(key=>Object.hasOwn(segments,key)));
     for(const k of ['metric','form','year','query','missing','limit']) if(saved[k]!==undefined) state[k]=saved[k];
     if(typeof saved.priceCurrency==='string'&&/^[A-Z]{3}$/.test(saved.priceCurrency))state.priceCurrency=saved.priceCurrency;
     if(saved.jdDate==='latest'||typeof saved.jdDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(saved.jdDate))state.jdDate=saved.jdDate;
@@ -215,7 +228,7 @@ function rankPositions(rows) {
 }
 function filters() {
   for(const [id,keys,set,labels] of [['vendor-filters',Object.keys(colors),state.vendors,vendorLabels],['segment-filters',Object.keys(segments),state.segments,segments]]) {
-    $('#'+id).innerHTML=keys.map(key=>`<label class="filter-row"><input type="checkbox" value="${esc(key)}" ${set.has(key)?'checked':''}>${id==='vendor-filters'?`<span class="vendor-dot" style="--vendor:${colors[key]}"></span>`:''}<span>${esc(labels?.[key]||key)}</span><span class="count">${state.gpus.filter(g=>id==='vendor-filters'?g.vendor===key:g.segment===key).length}</span></label>`).join('');
+    $('#'+id).innerHTML=keys.map(key=>`<label class="filter-row"><input type="checkbox" value="${esc(key)}" ${set.has(key)?'checked':''}>${id==='vendor-filters'?`<span class="vendor-dot" style="--vendor:${colors[key]}"></span>`:''}<span>${esc(labels?.[key]||key)}</span><span class="count">${state.gpus.filter(g=>id==='vendor-filters'?g.vendor===key:productCategories(g).includes(key)).length}</span></label>`).join('');
     $$('input',$('#'+id)).forEach(input=>input.addEventListener('change',()=>{input.checked?set.add(input.value):set.delete(input.value);render();}));
   }
   const architectures=[...new Set(state.gpus.map(g=>g.architecture))].sort();
@@ -229,7 +242,7 @@ function filters() {
 }
 function filtered() {
   const query=normalizedQuery(state.query);
-  return state.gpus.filter(g=>matchesScope(g)&&state.vendors.has(g.vendor)&&state.segments.has(g.segment)&&(!state.architectures.size||state.architectures.has(g.architecture))&&(state.form==='all'||g.form_factor===state.form)&&(state.year==='all'||String(g.release_year)===state.year)&&(!query||normalizedQuery(`${g.name} ${g.architecture} ${g.vendor} ${vendorLabels[g.vendor]||''}`).includes(query)));
+  return state.gpus.filter(g=>matchesScope(g)&&state.vendors.has(g.vendor)&&productCategories(g).some(key=>state.segments.has(key))&&(!state.architectures.size||state.architectures.has(g.architecture))&&(state.form==='all'||g.form_factor===state.form)&&(state.year==='all'||String(g.release_year)===state.year)&&(!query||normalizedQuery(`${g.name} ${g.architecture} ${g.vendor} ${vendorLabels[g.vendor]||''}`).includes(query)));
 }
 function ranked() {
   return filtered().filter(g=>state.missing||validValue(metricValue(g,state.metric))).sort((a,b)=>compareBySort(a,b)||a.name.localeCompare(b.name));
@@ -252,7 +265,7 @@ function render() {
   $('#ranking-table').classList.toggle('multi-sort',secondary.length>0);
   $('#gpu-rows').innerHTML=visible.length?visible.map((g,index)=>{
     const value=metricValue(g,state.metric),exists=validValue(value),rank=ranks[index];
-    return `<tr style="--vendor:${colors[g.vendor]}"><td class="row-selection"><input type="checkbox" data-select="${esc(g.id)}" aria-label="选择 ${esc(g.name)} 参与对比" ${state.selected.has(g.id)?'checked':''}></td><td class="rank-number ${Number(rank)<=3?'top':''}">${typeof rank==='number'?String(rank).padStart(2,'0'):rank}</td><td><button class="gpu-name" data-detail="${esc(g.id)}">${esc(shortName(g))}</button><div class="gpu-meta"><span style="color:${colors[g.vendor]}">${esc(vendorLabels[g.vendor]||g.vendor)}</span><span class="sep">/</span><span>${esc(g.architecture)}</span>${g.form_factor==='mobile'?'<span>· 移动</span>':g.memory_type==='unified'?'<span>· 统一内存</span>':''}${g.market==='china'?'<span>· 中国特供</span>':''}${g.user_modified?'<span>· 本地修改</span>':''}</div></td><td class="class-cell"><span class="segment-tag">${segments[g.segment]}</span></td><td class="bar-cell">${exists?`<div class="bar-track"><div class="bar-fill" style="width:${Math.max(.2,value/max*100)}%"></div></div>`:'<span class="missing">未公开 / 未核验</span>'}</td><td class="value ${exists?'':'missing'}">${format(value)}${exists?factorBadge(g,state.metric):''}</td></tr>`;
+    return `<tr style="--vendor:${colors[g.vendor]}"><td class="row-selection"><input type="checkbox" data-select="${esc(g.id)}" aria-label="选择 ${esc(g.name)} 参与对比" ${state.selected.has(g.id)?'checked':''}></td><td class="rank-number ${Number(rank)<=3?'top':''}">${typeof rank==='number'?String(rank).padStart(2,'0'):rank}</td><td><button class="gpu-name" data-detail="${esc(g.id)}">${esc(shortName(g))}</button><div class="gpu-meta"><span style="color:${colors[g.vendor]}">${esc(vendorLabels[g.vendor]||g.vendor)}</span><span class="sep">/</span><span>${esc(g.architecture)}</span>${g.form_factor==='mobile'?'<span>· 移动</span>':g.memory_type==='unified'?'<span>· 统一内存</span>':''}${g.market==='china'?'<span>· 中国特供</span>':''}${g.user_modified?'<span>· 本地修改</span>':''}</div></td><td class="class-cell"><span class="segment-tag">${esc(categoryLabel(g))}</span></td><td class="bar-cell">${exists?`<div class="bar-track"><div class="bar-fill" style="width:${Math.max(.2,value/max*100)}%"></div></div>`:'<span class="missing">未公开 / 未核验</span>'}</td><td class="value ${exists?'':'missing'}">${format(value)}${exists?factorBadge(g,state.metric):''}</td></tr>`;
   }).join(''):`<tr><td colspan="${8+secondary.length}" class="empty"><b>没有符合条件的 GPU</b>更换指标、重置筛选，或勾选“显示主指标缺失的 GPU”。</td></tr>`;
   $('#table-summary').textContent=`显示 ${visible.length} / ${all.length} 款 · ${state.sorts.length>1?`${state.sorts.length} 项指标依次排序`:metric.label} · 全部排序值相同则并列`;
   const displayedRows=$$('tr',$('#gpu-rows'));
@@ -284,7 +297,7 @@ function renderTray() {
 function detail(id) {
   const gpu=state.gpus.find(g=>g.id===id);if(!gpu)return;
   const sourceIndex=url=>gpu.sources.findIndex(s=>s.url===url)+1;
-  $('#detail-content').innerHTML=`<div class="dialog-head"><div><span class="eyebrow">GPU SPECIFICATIONS</span><h2>${esc(gpu.name)}</h2></div><button class="icon-button" data-close aria-label="关闭">×</button></div><div class="detail-tags"><span class="segment-tag ${gpu.vendor.toLowerCase()}">${gpu.vendor}</span><span class="segment-tag">${esc(gpu.architecture)}</span><span class="segment-tag">${segments[gpu.segment]} · ${forms[gpu.form_factor]||esc(gpu.form_factor)}</span>${gpu.release_year?`<span class="segment-tag">${gpu.release_year}</span>`:''}</div><p class="muted small">数字下标标明所用口径：官＝官方理论，推＝推算，测＝实测，参＝第三方规格。完整条件与其他测量记录见“算力证据”。矩阵仅显示稠密值与稀疏倍率。</p><table class="detail-metrics"><thead><tr><th>指标</th><th>数值 / 口径</th><th>来源</th></tr></thead><tbody>${Object.entries(state.metrics).map(([key,m])=>`<tr><td>${m.label}</td><td class="metric-value">${isComputeMetric(key)?formatCompute(metricValue(gpu,key)):format(metricValue(gpu,key))}${metricValue(gpu,key)!=null?` ${evidenceBadge(gpu,key)} <small>${m.unit}</small>`:''}</td><td class="metric-source">${computeSourceHtml(gpu,key)}</td></tr>`).join('')}</tbody></table>${computeHistoryHtml(gpu)}<ul class="detail-notes">${(gpu.notes||[]).map(n=>`<li>${esc(n)}</li>`).join('')}</ul><div class="detail-sources">${gpu.sources.map((s,i)=>`<div><a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">[${i+1}] ${esc(s.title||s.url)} ↗</a><br><small>${esc(s.kind==='techpowerup'?'TechPowerUp':s.kind==='vendor'?'厂商官方资料':s.kind==='partner'?'合作伙伴产品资料':s.kind==='research'?'研究论文 / 开源实测':'用户提供')} · ${esc(s.accessed_at||'未记录日期')}</small></div>`).join('')}</div><div class="dialog-footer"><span>${gpu.user_modified?'已保存本地修订':'内置数据快照'} · 缺失值不代表不支持</span></div>`;
+  $('#detail-content').innerHTML=`<div class="dialog-head"><div><span class="eyebrow">GPU SPECIFICATIONS</span><h2>${esc(gpu.name)}</h2></div><button class="icon-button" data-close aria-label="关闭">×</button></div><div class="detail-tags"><span class="segment-tag ${gpu.vendor.toLowerCase()}">${gpu.vendor}</span><span class="segment-tag">${esc(gpu.architecture)}</span><span class="segment-tag">${esc(categoryLabel(gpu))} · ${forms[gpu.form_factor]||esc(gpu.form_factor)}</span>${gpu.release_year?`<span class="segment-tag">${gpu.release_year}</span>`:''}</div><p class="muted small">数字下标标明所用口径：官＝官方理论，推＝推算，测＝实测，参＝第三方规格。完整条件与其他测量记录见“算力证据”。矩阵仅显示稠密值与稀疏倍率。</p><table class="detail-metrics"><thead><tr><th>指标</th><th>数值 / 口径</th><th>来源</th></tr></thead><tbody>${Object.entries(state.metrics).map(([key,m])=>`<tr><td>${m.label}</td><td class="metric-value">${isComputeMetric(key)?formatCompute(metricValue(gpu,key)):format(metricValue(gpu,key))}${metricValue(gpu,key)!=null?` ${evidenceBadge(gpu,key)} <small>${m.unit}</small>`:''}</td><td class="metric-source">${computeSourceHtml(gpu,key)}</td></tr>`).join('')}</tbody></table>${computeHistoryHtml(gpu)}<ul class="detail-notes">${(gpu.notes||[]).map(n=>`<li>${esc(n)}</li>`).join('')}</ul><div class="detail-sources">${gpu.sources.map((s,i)=>`<div><a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">[${i+1}] ${esc(s.title||s.url)} ↗</a><br><small>${esc(s.kind==='techpowerup'?'TechPowerUp':s.kind==='vendor'?'厂商官方资料':s.kind==='partner'?'合作伙伴产品资料':s.kind==='research'?'研究论文 / 开源实测':'用户提供')} · ${esc(s.accessed_at||'未记录日期')}</small></div>`).join('')}</div><div class="dialog-footer"><span>${gpu.user_modified?'已保存本地修订':'内置数据快照'} · 缺失值不代表不支持</span></div>`;
   $$('[data-close]',$('#detail-dialog')).forEach(button=>button.addEventListener('click',()=>$('#detail-dialog').close()));
   const memoryInfo=document.createElement('p');memoryInfo.className='memory-scope';memoryInfo.textContent=memoryCaption(gpu)+(gpu.memory_note?'。'+gpu.memory_note:'')+(gpu.market==='china'?' · 中国特供版本':'');$('.detail-tags',$('#detail-content')).after(memoryInfo);
   const metricRows=$$('tbody tr',$('.detail-metrics',$('#detail-content')));
@@ -354,7 +367,8 @@ function comparisonTableHtml(gpus) {
   const group=label=>`<tr class="compare-group"><th colspan="${gpus.length+1}">${esc(label)}</th></tr>`;
   const row=(label,cell)=>`<tr><th scope="row">${esc(label)}</th>${gpus.map(g=>`<td>${cell(g)}</td>`).join('')}</tr>`;
   let body=group('基础信息')+row('芯片厂商',g=>esc(vendorLabels[g.vendor]||g.vendor))+row('架构',g=>esc(g.architecture))
-    +row('产品类别',g=>esc(segments[g.segment]))+row('产品形态',g=>esc(forms[g.form_factor]||g.form_factor))
+    +row('产品类别',g=>esc(categoryLabel(g)))+row('产品形态',g=>esc(forms[g.form_factor]||g.form_factor))
+    +row('适用平台',g=>esc(productPlatforms(g).map(p=>p==='mobile'?'Mobile · 笔记本':'台式机').join(' / ')||'未标注'))
     +row('市场版本',g=>g.market==='china'?'中国特供':'一般 / 全球产品')
     +row('发布日期',g=>esc(dateLabel(g))+'<small class="compare-source">'+comparisonLink(g,g.field_sources?.release_date)+'</small>')
     +group('价格与日期')+row('发布售价（原币种）',g=>esc(priceLabel(g))+(g.launch_price?`<small class="price-sort-caption">${esc(g.launch_price.region)} · ${esc(priceBasis[g.launch_price.basis]||g.launch_price.basis)}</small>`:'')+`<small class="compare-source">${comparisonLink(g,g.field_sources?.launch_price)}</small>`)

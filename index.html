@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="跨厂商 GPU 规格数据库与动态性能天梯，支持显存、带宽、通用与矩阵算力比较。" name="description"/>
-<title>算力天梯</title><link href="./style.css?v=b43e5a7bfa8a" rel="stylesheet"/><script defer="" src="./app.js?v=a9990327382d"></script>
+<title>算力天梯</title><link href="./style.css?v=b43e5a7bfa8a" rel="stylesheet"/><script defer="" src="./app.js?v=54f802aa3dce"></script>
 </head>
 <body>
 <header class="topbar">
@@ -17,7 +17,7 @@
 <div class="side-heading"><span>筛选器</span><button class="text-button" id="reset">重置</button></div>
 <label class="search-box"><span>⌕</span><input aria-label="筛选 GPU 型号" id="filter-search" placeholder="搜索型号、架构…" type="search"/></label>
 <div aria-label="快捷产品范围" class="scope-filters" role="group"><button class="active" data-scope="all">全部产品</button><button data-scope="china">中国特供</button><button data-scope="unified">统一内存</button><button data-scope="domestic">国产厂商</button><button aria-pressed="false" data-scope="apple" type="button">Apple M 系列</button></div><fieldset><legend>芯片厂商</legend><div id="vendor-filters"></div></fieldset>
-<fieldset><legend>产品类别</legend><div id="segment-filters"></div></fieldset>
+<fieldset><legend>产品类别</legend><div id="segment-filters"></div><small class="muted">Mobile 仅指笔记本。跨平台芯片可出现在两类；总数去重。</small></fieldset>
 <fieldset><legend>架构 <span id="arch-count"></span></legend><div class="architecture-list" id="architecture-filters"></div></fieldset>
 <fieldset><legend>产品形态</legend><select aria-label="产品形态" id="form-filter"><option value="all">全部形态</option><option value="desktop">桌面显卡</option><option value="mobile">移动显卡</option><option value="pcie">PCIe 加速卡</option><option value="sxm">SXM 模组</option><option value="oam">OAM 模组</option><option value="module">其他模组</option><option value="soc">统一内存 SoC</option></select></fieldset>
 <fieldset><legend>发布年份</legend><select aria-label="筛选发布年份" id="year-filter"><option value="all">全部年份</option></select></fieldset>
@@ -40,7 +40,7 @@
 </section>
 </div>
 <section hidden="" id="methodology">
-<div class="info-grid"><article><span class="eyebrow">01 / COVERAGE</span><h2>跨厂商，多种内存方案</h2><p>NVIDIA 覆盖 Ampere、Ada、Hopper、Blackwell；AMD 覆盖同期 RDNA 与 CDNA 产品；Intel 覆盖 Arc、Arc Pro 与数据中心 GPU。同时收录中国特供型号、Apple / NVIDIA / AMD 统一内存 SoC，以及华为、寒武纪、摩尔线程等国产加速产品。移动型号单独标记。数据库是可扩展的规格快照，不能保证涵盖所有 OEM、地区和新发布变体。</p></article><article><span class="eyebrow">02 / PROVENANCE</span><h2>每个数值可追溯</h2><p>规格参考厂商文档、TechPowerUp 等第三方资料及公开研究。数值保留来源链接、核验日期和必要的口径说明；官方理论、推算和实测分别标记。此站展示整理后的规格事实与原创比较说明。</p></article><article><span class="eyebrow">03 / COMPARABILITY</span><h2>把口径放在数值旁边</h2><p>通用 FP16 / FP32 / FP64 与矩阵算力分开。矩阵统一按稠密算力排名，并标注已核验的稀疏倍率；不重复列出稀疏算力。INT4 / INT8 使用 TOPS，其余使用 TFLOPS。稀疏倍率要求特定数据结构，不能默认视为 2 倍。不同 GPU 的累加精度、时钟和指令路径可能不同，比较前请查看详情。</p></article><article><span class="eyebrow">04 / UNITS</span><h2>容量、带宽与理论峰值</h2><p>独立显存按产品标称 GB 保存；统一内存注明固定配置或最高支持容量，最高值以 ≤ 标记，CPU/GPU 共享，实际可供 GPU 分配容量受系统和配置限制。NPU 或整机 AI TOPS 不作为 GPU 通用 / 矩阵算力。带宽统一为十进制 GB/s（1 TB/s = 1000 GB/s）。算力数值以下标注明口径，优先官方理论、其次推算和已有第三方规格，再用实测补缺。相同口径按测试日期（未知时按来源日期）选最新记录，不自动取最大值。按显示值排序；不同口径或测试条件不代表严格横向性能对比，所有记录均可在详情查看。多芯片产品须注意单芯片与整卡口径。未公开、不支持或未完成核验的指标留空，默认不参与排名。移动 GPU 的功耗配置会影响表现。</p></article></div>
+<div class="info-grid"><article><span class="eyebrow">01 / COVERAGE</span><h2>跨厂商，多种内存方案</h2><p>NVIDIA 覆盖 Ampere、Ada、Hopper、Blackwell；AMD 覆盖同期 RDNA 与 CDNA 产品；Intel 覆盖 Arc、Arc Pro 与数据中心 GPU。同时收录中国特供型号、Apple / NVIDIA / AMD 统一内存 SoC，以及华为、寒武纪、摩尔线程等国产加速产品。消费级拆为台式机和 Mobile，Mobile 包括笔记本的独立 GPU、集成 GPU 和统一内存芯片。跨平台芯片可同时筛入两类，列表和总数去重。移动型号单独标记。数据库是可扩展的规格快照，不能保证涵盖所有 OEM、地区和新发布变体。</p></article><article><span class="eyebrow">02 / PROVENANCE</span><h2>每个数值可追溯</h2><p>规格参考厂商文档、TechPowerUp 等第三方资料及公开研究。数值保留来源链接、核验日期和必要的口径说明；官方理论、推算和实测分别标记。此站展示整理后的规格事实与原创比较说明。</p></article><article><span class="eyebrow">03 / COMPARABILITY</span><h2>把口径放在数值旁边</h2><p>通用 FP16 / FP32 / FP64 与矩阵算力分开。矩阵统一按稠密算力排名，并标注已核验的稀疏倍率；不重复列出稀疏算力。INT4 / INT8 使用 TOPS，其余使用 TFLOPS。稀疏倍率要求特定数据结构，不能默认视为 2 倍。不同 GPU 的累加精度、时钟和指令路径可能不同，比较前请查看详情。</p></article><article><span class="eyebrow">04 / UNITS</span><h2>容量、带宽与理论峰值</h2><p>独立显存按产品标称 GB 保存；统一内存注明固定配置或最高支持容量，最高值以 ≤ 标记，CPU/GPU 共享，实际可供 GPU 分配容量受系统和配置限制。NPU 或整机 AI TOPS 不作为 GPU 通用 / 矩阵算力。带宽统一为十进制 GB/s（1 TB/s = 1000 GB/s）。算力数值以下标注明口径，优先官方理论、其次推算和已有第三方规格，再用实测补缺。相同口径按测试日期（未知时按来源日期）选最新记录，不自动取最大值。按显示值排序；不同口径或测试条件不代表严格横向性能对比，所有记录均可在详情查看。多芯片产品须注意单芯片与整卡口径。未公开、不支持或未完成核验的指标留空，默认不参与排名。移动 GPU 的功耗配置会影响表现。</p></article></div>
 <div class="notice">京东检索均价：按同型号、同容量单卡的普通标价样本去重后取算术平均，排除明确二手、整机、配件、订金及优惠条件价。商品成色仅依据搜索卡片判断，未逐件核验实物与详情页成色。公开版保留检索日期、地区、样本数、价格区间和均值；不代表全站均价或实际成交价。没有有效样本时不生成价格，移动 GPU 和统一内存 SoC 不以整机价格替代。</div>
 <div class="notice" id="tpu-review-summary"></div>
 <div class="notice" id="storage-notice">公开规格快照，支持筛选、排序、比较与 JSON 导出。浏览器保存筛选偏好与比较选择。</div>
